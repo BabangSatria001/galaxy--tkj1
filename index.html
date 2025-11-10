@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaksi.Bikinan.Mamas.Satria</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.min.js"></script>
+    <style>
+        /* ================================================= */
+        /* CSS GABUNGAN & LOADER BARU */
+        /* ================================================= */
+
+        /* Variabel Warna */
+        :root {
+            --primary-color: #1E90FF; /* Biru Cerah Loader */
+            --secondary-color: #FF6347; /* Merah Countdown */
+            --initial-button: #4CAF50; /* Hijau Awal */
+            --clicked-button: #FF9800; /* Oranye Setelah Klik */
+            --action-button-color: #5cb85c; /* Hijau Tombol Aksi Akhir */ /* BARU */
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #1a1a2e; 
+            color: white;
+            transition: background-color 0.5s;
+            /* Hapus background-image dari sini */
+            position: relative; 
+        }
+
+        /* --- MODIFIKASI: Video Background CSS Dimulai --- */
+        #video-background {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            z-index: 1; /* Di bawah intro-container */
+            background-size: cover;
+            transition: opacity 1s;
+        }
+
+        /* Overlay gelap untuk meningkatkan keterbacaan teks */
+        body::before {
+            content: '';
+            position: fixed; /* Ubah ke fixed agar tidak scroll */
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.4); /* Opacity 40% */
+            z-index: 5; /* Di bawah intro-container, di atas video */
+            transition: opacity 1s; /* Transisi saat overlay hilang */
+        }
+
+        /* Kelas untuk menghilangkan video dan overlay saat Three.js dimulai */
+        body.galaxy-active video, body.galaxy-active::before {
+            opacity: 0 !important;
+            pointer-events: none;
+        }
+        
+        body.galaxy-active {
+            background-color: #000 !important; /* Latar belakang hitam untuk galaksi */
+        }
+        /* --- MODIFIKASI: Video Background CSS Berakhir --- */
+
+
+        /* Container Intro (Menampung semua elemen intro) */
+        #intro-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 25px;
+            position: fixed;
+            z-index: 3000; 
+        }
+
+        /* Gaya Tombol Awal (Fase 1) */
+        #initial-play-button { /* DIGANTI: play-button -> initial-play-button */
+            padding: 20px 60px;
+            font-size: 2em;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: var(--initial-button); 
+            color: white;
+            border: none;
+            border-radius: 10px; 
+            transition: all 0.5s ease-in-out;
+            z-index: 10;
+        }
+        #initial-play-button:hover {
+            background-color: #45a049; 
+            transform: scale(1.05);
+        }
+        
+        /* Style untuk tombol setelah diklik (Transisi 1) */
+        #initial-play-button.clicked {
+            background-color: var(--clicked-button); 
+            cursor: default;
+        }
+
+        /* Kelas untuk menyembunyikan elemen secara visual */
+        .hidden {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none;
+            transition: opacity 0.5s, visibility 0.5s;
+        }
+
+        /* --- CSS Loader Asli (Untuk Fase 2) --- */
+        .loader {
+            width: 50px;
+            aspect-ratio: 1;
+            display: grid;
+        }
+        .loader:before, .loader:after {
+            content: "";
+            grid-area: 1/1;
+            --c:#0000 calc(100%/3), var(--primary-color) 0 calc(2*100%/3),#0000 0; 
+            --c1:linear-gradient(90deg,var(--c));
+            --c2:linear-gradient( 0deg,var(--c));
+            background: var(--c1),var(--c2),var(--c1),var(--c2);
+            background-size: 300% 4px,4px 300%;
+            background-repeat: no-repeat;
+            animation: l11 1s infinite linear;
+        }
+        .loader:after {
+            margin: 10px;
+            transform: scaleX(-1);
+            animation-delay: -.25s;
+        }
+        @keyframes l11 {
+            0%   {background-position: 50%  0,100% 100%,0    100%,0 0}
+            25%  {background-position: 0    0,100% 50% ,0    100%,0 0}
+            50%  {background-position: 0    0,100% 0   ,50%  100%,0 0}
+            75%  {background-position: 0    0,100% 0   ,100% 100%,0 50%}
+            75.01%{background-position: 100% 0,100% 0   ,100% 100%,0 50%}
+            100% {background-position: 50%  0,100% 0   ,100% 100%,0 100%}
+        }
+        
+        /* ============== Efek Gelombang Teks Loading ============== */
+        #loading-message {
+            font-size: 1.2em;
+            letter-spacing: 2px;
+            margin: 0;
+            display: flex;
+            z-index: 10;
+        }
+        #loading-message span {
+            animation: wave 1s infinite ease-in-out;
+            animation-delay: calc(0.1s * var(--i)); 
+            display: inline-block;
+            transform-origin: bottom;
+        }
+        @keyframes wave {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); } 
+        }
+
+        /* ============= Countdown Smooth & Estetik ============= */
+        #countdown-text {
+            font-size: 5em;
+            color: var(--secondary-color);
+            font-weight: 900;
+            text-shadow: 0 0 15px rgba(255, 99, 71, 0.8);
+            margin: 0;
+            animation: smoothScale 1s infinite alternate; 
+            z-index: 10;
+        }
+        @keyframes smoothScale {
+            0% { transform: scale(0.8); opacity: 0.7; }
+            100% { transform: scale(1.2); opacity: 1; }
+        }
+
+        /* ============= Tombol Aksi Galaxy (Fase 3) ============= */
+        #action-button {
+            padding: 12px 30px;
+            font-size: 1.3em;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: var(--action-button-color);
+            color: white;
+            border: none;
+            border-radius: 50px; 
+            box-shadow: 0 5px 15px rgba(92, 184, 92, 0.4);
+            transition: all 0.3s ease; 
+            transform: scale(0.95);
+            z-index: 10;
+        }
+        #action-button:hover {
+            background-color: #4cae4c; 
+            transform: scale(1.05); 
+            box-shadow: 0 8px 20px rgba(92, 184, 92, 0.6);
+        }
+        #action-button:active {
+            transform: scale(1.0); 
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translate3d(0, 40px, 0) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0) scale(0.95);
+            }
+        }
+        
+        /* Sembunyikan semua elemen Three.js dan Kontrol di awal */
+        #c, #menu-button, #playlist-overlay, #zoom-controls {
+            display: none; 
+        }
+        
+        /* --- THREE.JS & PLAYLIST CSS (Lanjutan) --- */
+        html, body { margin:0; height:100%; overflow:hidden; }
+        canvas { display:block; position: fixed; top: 0; left: 0; z-index: 100; } 
+        
+        /* Kontrol Zoom dan Menu Musik */
+        #menu-button { position: fixed; top: 20px; right: 20px; background: rgba(255, 100, 0, 0.7); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(255, 100, 0, 0.5); z-index: 2000; transition: background 0.3s, transform 0.3s;}
+        #zoom-controls { position: fixed; top: 25px; right: 80px; display: flex; gap: 10px; z-index: 2000; }
+        .zoom-button { background: rgba(30, 144, 255, 0.7); color: white; border: none; border-radius: 8px; padding: 8px 15px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 0 10px rgba(30, 144, 255, 0.5); transition: background 0.3s, transform 0.3s; }
+        .zoom-button:hover { background: rgba(30, 144, 255, 0.9); transform: scale(1.05); }
+
+        /* ================================================= */
+        /* START: STYLE BARU UNTUK EFEK TEKS RGB NEON */
+        /* ================================================= */
+        #feedback-text {
+            /* Pastikan teks berada di atas kanvas Three.js */
+            z-index: 3000; /* Ditingkatkan agar di atas video overlay */
+            font-weight: bold;
+            /* Inisialisasi warna dan shadow */
+            color: white; 
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.5), 
+                         0 0 10px rgba(0, 255, 0, 0.5);
+            animation: neon-rgb-glow 3s infinite alternate; /* Menerapkan animasi */
+        }
+
+        /* Definisi Animasi RGB Glow */
+        @keyframes neon-rgb-glow {
+            0% {
+                text-shadow: 
+                    0 0 5px #ff0000, /* Merah */
+                    0 0 10px #ff0000,
+                    0 0 15px #0000ff; /* Biru */
+                color: #fff;
+            }
+            33% {
+                text-shadow: 
+                    0 0 5px #00ff00, /* Hijau */
+                    0 0 10px #00ff00,
+                    0 0 15px #ff00ff; /* Magenta */
+                color: #fff;
+            }
+            66% {
+                text-shadow: 
+                    0 0 5px #0000ff, /* Biru */
+                    0 0 10px #0000ff,
+                    0 0 15px #ffff00; /* Kuning */
+                color: #fff;
+            }
+            100% {
+                text-shadow: 
+                    0 0 5px #ff0000, /* Kembali ke Merah */
+                    0 0 10px #ff0000,
+                    0 0 15px #0000ff; /* Biru */
+                color: #fff;
+            }
+        }
+        /* ================================================= */
+        /* END: STYLE BARU UNTUK EFEK TEKS RGB NEON */
+        /* ================================================= */
+
+    </style>
+</head>
+<body>
+
+    <video autoplay loop muted id="video-background">
+        <source src="https://www.dropbox.com/scl/fi/3uhekswerjwz4a6v8brad/VID_20251110_163508_368.mp4?rlkey=p0wj7x4cxr30zpiken0bv9xgh&st=1ydrhs2o&dl=1" type="video/mp4">
+        Browser Anda tidak mendukung tag video.
+    </video>
+    
+    <div id="intro-container">
+        <button id="initial-play-button">▶PLAY</button>
+        
+        <p id="loading-message" class="hidden"></p> 
+        <div class="loader hidden" id="loader"></div>
+        <p id="countdown-text" class="hidden"></p>
+        
+        <button id="action-button" class="hidden">👉 Pencet Dulu 👈💕</button>
+    </div>
+
+    <canvas id="c"></canvas>
+    
+    <div id="zoom-controls">
+        <button id="zoom-jauh" class="zoom-button">Jauh (3000M)</button>
+        <button id="zoom-sedang" class="zoom-button">Sedang (1350M)</button>
+        <button id="zoom-dekat" class="zoom-button">Dekat (650M)</button>
+    </div>
+    <button id="menu-button">👑</button>
+
+    <div id="playlist-overlay">
+      <div class="playlist-content">
+        <button id="close-playlist">✖</button>
+        <h2>Playlist Lagu Cinta</h2>
+        <div id="playlist-items"></div>
+        <div class="playlist-progress" id="playlist-progress">
+          <div class="playlist-progress-bar" id="playlist-progress-bar"></div>
+        </div>
+        <div class="playlist-controls">
+          <button id="prev-track">⏮</button>
+          <button id="toggle-play-pause">▶</button>
+          <button id="next-track">⏭</button>
+        </div>
+      </div>
+    </div>
+    
+    <audio id="audio" loop></audio>
+
+<script>
+    // ==============================================
+    // A. SETUP VARIABEL & LOGIKA VISUAL INTRO & LOADER
+    // ==============================================
+    const audio = document.getElementById('audio');
+    const initialPlayButton = document.getElementById('initial-play-button');
+    const introContainer = document.getElementById('intro-container');
+    const loader = document.getElementById('loader');
+    const loadingMessage = document.getElementById('loading-message');
+    const countdownText = document.getElementById('countdown-text');
+    const actionButton = document.getElementById('action-button'); 
+    const videoBackground = document.getElementById('video-background'); // BARU
+
+    const loaderDuration = 4000; // Durasi Loader sebelum Countdown
+    
+    // Inisialisasi efek gelombang teks loading
+    const textToWave = "Sabar Dulu Masih Loading🤜....";
+    loadingMessage.innerHTML = Array.from(textToWave)
+        .map((char, index) => `<span style="--i: ${index}">${char === ' ' ? '&nbsp;' : char}</span>`)
+        .join('');
+
+    // --- FUNGSI FASE 2: Tampilkan Loader & Countdown ---
+    function showLoaderAndCountdown() {
+        // Hilangkan Tombol Awal (Fase 1)
+        initialPlayButton.classList.add('hidden');
+        
+        // Tampilkan Loader dan pesan Loading
+        loader.classList.remove('hidden');
+        loadingMessage.classList.remove('hidden');
+        
+        // Setelah durasi loader, mulai Countdown
+        setTimeout(() => {
+            loader.classList.add('hidden');
+            loadingMessage.classList.add('hidden');
+            countdownText.classList.remove('hidden');
+            startCountdown();
+        }, loaderDuration); 
+    }
+
+    // --- FUNGSI COUNTDOWN ---
+    function startCountdown() {
+        let count = 3;
+        countdownText.textContent = count;
+
+        const countdownInterval = setInterval(() => {
+            count--;
+            
+            if (count >= 1) {
+                countdownText.textContent = count;
+            } else if (count === 0) {
+                countdownText.textContent = "👇😎👍";
+            } else {
+                clearInterval(countdownInterval);
+                countdownText.classList.add('hidden');
+                // Tampilkan tombol "Pencet Dulu" (Fase 3)
+                actionButton.classList.remove('hidden'); 
+                actionButton.style.animation = 'fadeInUp 0.5s ease forwards';
+            }
+        }, 1000);
+    }
+    
+    // --- FUNGSI FASE 1: Mulai Musik & Transisi ke Loader ---
+    function startMusicAndTransition() {
+        initialPlayButton.removeEventListener('click', startMusicAndTransition);
+        
+        // 1. Terapkan Wivesong ke elemen audio sebelum di-play
+        audio.src = "https://www.dropbox.com/scl/fi/l705vyw46xqq7ew440s6y/Wivesong.mp3?rlkey=28mw7ykofw5gkvnk9uwb5d63p&st=p5sbtau5&dl=1";
+        audio.load();
+
+        audio.play()
+            .then(() => {
+                // Tahap 1: Musik Berputar & Tombol Berubah (Intro Musik)
+                initialPlayButton.textContent = "Loading"; 
+                initialPlayButton.classList.add('clicked');
+                
+                // Tahap 2: Transisi (Tombol intro hilang setelah 3 detik dan masuk ke Loader)
+                setTimeout(() => {
+                    // Mulai Loader (Fase 2)
+                    showLoaderAndCountdown();
+                }, 3000); // 3000 milidetik = 3 detik
+
+            })
+            .catch(error => {
+                console.error("Gagal memutar musik:", error);
+                alert("Gagal memutar musik. Pastikan browser Anda mengizinkan pemutaran.");
+                initialPlayButton.addEventListener('click', startMusicAndTransition);
+                initialPlayButton.textContent = "Gagal. Coba Lagi!";
+                initialPlayButton.classList.remove('clicked');
+            });
+    }
+
+    // Pasang Event Listener Awal
+    initialPlayButton.addEventListener('click', startMusicAndTransition);
+
+    // ==============================================
+    // B. PENGATURAN GLOBAL THREE.JS & AUDIO
+    // ==============================================
+    
+    let renderer, scene, camera, core, ring1, ring2, glow, accretionDisk, textGroup;
+    let dragging = false, lastX = 0, lastY = 0, rotX = 0.2, rotY = 0, targetDist = 300, currentDist;
+    let isIntroDone = false;
+    let introProgress = 0; 
+    const startDist = 10000; 
+    const introDuration = 200;
+    const ZOOM_SPEED = 25; 
+    let t = 0;
+    const loaderThree = new THREE.TextureLoader();
+    const planets = [];
+
+    // Variabel Audio/Playlist
+    const menuButton = document.getElementById('menu-button');
+    const playlistOverlay = document.getElementById('playlist-overlay');
+    const closePlaylistBtn = document.getElementById('close-playlist');
+    const playlistItemsContainer = document.getElementById('playlist-items');
+    const togglePlayPauseBtn = document.getElementById('toggle-play-pause');
+    const prevTrackBtn = document.getElementById('prev-track');
+    const nextTrackBtn = document.getElementById('next-track');
+    const playlistProgress = document.getElementById('playlist-progress');
+    const playlistProgressBar = document.getElementById('playlist-progress-bar');
+    
+    // Variabel Zoom
+    const zoomJauhButton = document.getElementById('zoom-jauh');
+    const zoomSedangButton = document.getElementById('zoom-sedang');
+    const zoomDekatButton = document.getElementById('zoom-dekat');
+    const zoomControls = document.getElementById('zoom-controls');
+    
+    // !!! Daftar lagu (Wivesong sudah di load di startMusicAndTransition)
+    const playlist = [
+      { name: "Wivesong", url: "https://www.dropbox.com/scl/fi/l705vyw46xqq7ew440s6y/Wivesong.mp3?rlkey=28mw7ykofw5gkvnk9uwb5d63p&st=p5sbtau5&dl=1", duration: "3:40" },
+      { name: "Perfect - Ed Sheeran", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", duration: "3:45" },
+      // ... lagu lainnya
+    ];
+    let currentTrackIndex = 0; // Wivesong adalah track 0
+    let isPlaying = true; // Langsung true karena sudah di-play di startMusicAndTransition
+
+    // ==============================================
+    // C. FUNGSI UTILITY THREE.JS (DARI KODE ASLI ANDA)
+    // ==============================================
+    
+    function makeCenterTextTexture(msg){
+        const c=document.createElement('canvas');c.width=512;c.height=512;
+        const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+        ctx.font='bold 80px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillStyle='#ff0033';ctx.shadowColor='#ff66aa';ctx.shadowBlur=50;
+        ctx.fillText(msg,c.width/2,c.height/2);
+        return new THREE.CanvasTexture(c);
+    }
+    function makeGlow(size=768,c1='255,160,0',c2='255,60,0'){
+        const c=document.createElement('canvas');c.width=c.height=size;
+        const g=c.getContext('2d');
+        const grad=g.createRadialGradient(size/2,size/2,size*0.05,size/2,size/2,size*0.5);
+        grad.addColorStop(0,'rgba('+c1+',0.9)');grad.addColorStop(0.5,'rgba('+c2+',0.5)');grad.addColorStop(1,'rgba(0,0,0,0)');
+        g.fillStyle=grad;g.fillRect(0,0,size,size);
+        return new THREE.CanvasTexture(c);
+    }
+    function ringTexture(size=768){
+        const c=document.createElement('canvas');c.width=c.height=size;
+        const g=c.getContext('2d');g.translate(size/2,size/2);
+        const r1=size*0.34, r2=size*0.49;
+        const grd=g.createRadialGradient(0,0,r1*0.3,0,0,r2);
+        grd.addColorStop(0.0,'rgba(255,255,200,1)');grd.addColorStop(0.3,'rgba(255,160,60,0.9)');
+        grd.addColorStop(0.65,'rgba(255,80,0,0.6)');grd.addColorStop(1.0,'rgba(0,0,0,0)');
+        g.fillStyle=grd;
+        g.beginPath(); g.arc(0,0,r2,0,Math.PI*2); g.arc(0,0,r1,0,Math.PI*2,true); g.closePath(); g.fill();
+        return new THREE.CanvasTexture(c);
+    }
+    function makeAccretionDiskTexture(size=1024){
+        const c=document.createElement('canvas');c.width=c.height=size;const ctx=c.getContext('2d');
+        ctx.translate(size/2,size/2); 
+        const grad=ctx.createRadialGradient(0,0,size*0.1,0,0,size*0.45);
+        grad.addColorStop(0.0,'rgba(255,255,255,1)');grad.addColorStop(0.1,'rgba(255,200,100,0.9)'); 
+        grad.addColorStop(0.3,'rgba(255,100,0,0.7)');grad.addColorStop(0.6,'rgba(200,0,0,0.5)'); 
+        grad.addColorStop(1.0,'rgba(0,0,0,0)'); 
+        ctx.fillStyle=grad;ctx.beginPath();ctx.arc(0,0,size*0.45,0,Math.PI*2);ctx.fill();
+        return new THREE.CanvasTexture(c);
+    }
+    function makeTextTexture(text,color){
+        const c=document.createElement('canvas');c.width=512;c.height=128;
+        const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+        ctx.font='bold 60px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillStyle='#fff';ctx.shadowColor=color;ctx.shadowBlur=30;
+        ctx.fillText(text,c.width/2,c.height/2);
+        return new THREE.CanvasTexture(c);
+    }
+    
+    // --- DAFTAR FOTO DIPERBARUI MENGGUNAKAN LINK SUPAIMG.COM ---
+    const photoURLs = [ 
+        'https://i.supaimg.com/80c9a8c0-e295-4e63-b9e7-c63c6d3c62c4.png',
+        'https://i.supaimg.com/12a10215-96a0-42ef-ba0a-62230c038d29.png',
+        'https://i.supaimg.com/a585bb06-4593-488b-9c4a-6a086bfa6256.png',
+        'https://i.supaimg.com/e6ae29aa-a4e1-42ed-a2db-9260f07f8eef.png',
+        'https://i.supaimg.com/1fe62bd7-4f43-4617-9630-b0d6d7d53fef.png',
+        'https://i.supaimg.com/d124d78d-ca0e-4539-a56c-b47c35c9df52.png',
+        'https://i.supaimg.com/a90094cf-b526-4c83-b812-c698a1f36034.png',
+        'https://i.supaimg.com/be1c1a48-e12e-4a94-8a70-1e52f31f390b.png',
+        'https://i.supaimg.com/b375815e-c4b0-4eb7-ac23-6256f2720c3f.png',
+        'https://i.supaimg.com/df23c267-a950-47cd-86a8-523527bc1c3e.png',
+        'https://i.supaimg.com/812c54d6-254d-4a5e-8f0a-ee665fdc4bd9.png',
+        'https://i.supaimg.com/57353e96-fd8a-43e8-a9da-2a5f937b8999.png' 
+    ];
+    function makePhotoTexture(url, size=512, radius=30) {
+        const c = document.createElement('canvas'); c.width = c.height = size; const ctx = c.getContext('2d');
+        const image = new Image(); image.crossOrigin = 'anonymous'; 
+        return new Promise(resolve => {
+            image.onload = () => {
+                ctx.beginPath();
+                ctx.moveTo(radius, 0); ctx.lineTo(size - radius, 0); ctx.quadraticCurveTo(size, 0, size, radius);
+                ctx.lineTo(size, size - radius); ctx.quadraticCurveTo(size, size, size - radius, size);
+                ctx.lineTo(radius, size); ctx.quadraticCurveTo(0, size, 0, size - radius);
+                ctx.lineTo(0, radius); ctx.quadraticCurveTo(0, 0, radius, 0); ctx.closePath(); ctx.clip();
+                ctx.drawImage(image, 0, 0, size, size);
+                ctx.globalCompositeOperation = 'source-over'; 
+                ctx.shadowColor = 'rgba(255, 100, 200, 0.6)'; ctx.shadowBlur = 10; 
+                ctx.strokeStyle = 'rgba(255, 120, 220, 0.7)'; ctx.lineWidth = 3; 
+                ctx.beginPath();
+                ctx.moveTo(radius, 0); ctx.lineTo(size - radius, 0); ctx.quadraticCurveTo(size, 0, size, radius);
+                ctx.lineTo(size, size - radius); ctx.quadraticCurveTo(size, size, size - radius, size);
+                ctx.lineTo(radius, size); ctx.quadraticCurveTo(0, size, 0, size - radius);
+                ctx.lineTo(0, radius); ctx.quadraticCurveTo(0, 0, radius, 0); ctx.closePath(); ctx.stroke();
+                // Mengambil foto dari array sesuai urutan, bukan random.
+                resolve(new THREE.CanvasTexture(c));
+            };
+            image.src = url; 
+        });
+    }
+
+    function createPlanet(textureUrl, initialDistance) {
+        const planetGeometry = new THREE.SphereGeometry(1, 32, 32); 
+        const planetMaterial = new THREE.MeshPhongMaterial({ map: loaderThree.load(textureUrl), shininess: 10 });
+        const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+        const angle = Math.random() * Math.PI * 2;
+        const height = (Math.random() - 0.5) * initialDistance * 0.5; 
+        const radius = initialDistance + (Math.random() - 0.5) * initialDistance * 0.3; 
+        planet.position.set(radius * Math.cos(angle), height, radius * Math.sin(angle));
+        const scale = 50 + Math.random() * 100; 
+        planet.scale.set(scale, scale, scale);
+        planet.userData.rotationSpeed = (Math.random() - 0.5) * 0.002;
+        planet.userData.orbitalSpeed = (Math.random() - 0.5) * 0.0001; 
+        planet.userData.orbitalRadius = radius;
+        planet.userData.orbitalAngle = angle;
+        scene.add(planet);
+        planets.push(planet);
+    }
+    const planetTextures = [
+        'https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg', 'https://threejs.org/examples/textures/planets/jupitermap.jpg',     
+        'https://threejs.org/examples/textures/planets/mars_1k_color.jpg', 'https://threejs.org/examples/textures/planets/neptunemap.jpg',    
+        'https://threejs.org/examples/textures/planets/venus_atmos_2048.jpg' 
+    ];
+    const baseWords = [
+  '⚡🫡 Yoga',       
+  '🌿🙂 Arif',       
+  '🔥😏 Syaiful',    
+  '🌙😉 Arju',       
+  '🤔😶‍🌫️ Rehan',    
+  '🌧️🫤 Zaki',       
+  '🔍🤨 Yanto',       
+  '🌈😮 Nanda',       
+  '⚔️😎👑 Satria',    
+  '❄️🥶 Hamam',       
+
+  '🌙😴 Nayla',       
+  '🎉🤣 Nurma',       
+  '🌸🙂 Anisa',       
+  '🎶😆 Maya',        
+  '🌼🙂 Rina',        
+  '💞🤗 Alya',        
+  '🎭🙃 JioFanny',     
+  '☁️😌 Aini',        
+  '🌷☺ Sherly',       
+  '🌻😁 Siti',        
+  '💐🙂 Linda',       
+  '🎀😄 Ririn',       
+  '🔥😠 Rois',        
+  '🍃🙂 Nikmah',      
+  '🌹🙂 Dina'
+];
+    const COLORS=['#ff66ff','#66ccff','#ffd36b','#ff9966','#8df59a','#ffa0f8','#c6a7ff','#ff4444','#44ff99','#99ccff'];
+
+
+    // ==============================================
+    // D. FUNGSI INITIATION TIGA.JS (DIPANGGIL SETELAH KLIK ACTION BUTTON)
+    // ==============================================
+    
+    function initThreeJS() {
+        // Hapus video background dan overlay
+        document.body.classList.add('galaxy-active');
+        // Stop video (opsional, karena opacity 0, tapi bagus untuk performa)
+        videoBackground.pause(); 
+        
+        // Hilangkan kontainer intro/loader/aksi
+        introContainer.style.display = 'none'; 
+        
+        // 1. Tampilkan elemen Three.js
+        document.getElementById('c').style.display = 'block';
+        menuButton.style.display = 'flex';
+        zoomControls.style.display = 'flex'; 
+
+        // 2. Setup Scene dan Camera
+        const canvas = document.getElementById('c');
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+        currentDist = startDist;
+        targetDist = 400; 
+
+        // --- Inisialisasi Objek Three.js ---
+        const nebulaTex = loaderThree.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/cube/space/px.jpg');
+        scene.background = nebulaTex;
+
+        (function makeStars(count=2000,spread=3000){
+            const g=new THREE.BufferGeometry();
+            const pos=new Float32Array(count*3);
+            for(let i=0;i<count;i++){
+                const r=spread*(0.3+Math.random()*0.7);
+                const th=Math.random()*Math.PI*2;
+                const ph=Math.acos(2*Math.random()-1);
+                pos[i*3+0]=r*Math.sin(ph)*Math.cos(th);pos[i*3+1]=r*Math.cos(ph);pos[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+            }
+            g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+            scene.add(new THREE.Points(g,new THREE.PointsMaterial({size:1.5,color:0xffffff,depthWrite:false})));
+        })();
+        
+        const coreMat=new THREE.MeshPhongMaterial({ color:0x050505, emissive: 0x180000, transparent:true, opacity:0.4, shininess:200 });
+        core=new THREE.Mesh(new THREE.SphereGeometry(40,64,64),coreMat);
+        scene.add(core);
+        
+        const centerTex=makeCenterTextTexture("TE AMO ❤️");
+        const centerMat=new THREE.SpriteMaterial({map:centerTex,transparent:true});
+        const centerSprite=new THREE.Sprite(centerMat);
+        centerSprite.scale.set(60,60,1); centerSprite.position.set(0,0,0); centerSprite.renderOrder=999;
+        scene.add(centerSprite);
+
+        glow=new THREE.Sprite(new THREE.SpriteMaterial({map:makeGlow(),transparent:true,depthWrite:false}));
+        glow.scale.set(500,500,1);
+        scene.add(glow);
+
+        ring1=new THREE.Mesh(new THREE.RingGeometry(50,80,128),new THREE.MeshBasicMaterial({map:ringTexture(),transparent:true,side:THREE.DoubleSide})); 
+        ring2=new THREE.Mesh(new THREE.RingGeometry(90,125,128),new THREE.MeshBasicMaterial({map:ringTexture(),transparent:true,side:THREE.DoubleSide,opacity:0.6})); 
+        ring1.rotation.x=ring2.rotation.x=Math.PI/2;
+        scene.add(ring1);scene.add(ring2);
+
+        const accretionDiskTex = makeAccretionDiskTexture();
+        const accretionDiskMat = new THREE.MeshBasicMaterial({
+            map: accretionDiskTex, transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
+        });
+        accretionDisk = new THREE.Mesh(new THREE.RingGeometry(45, 95, 128), accretionDiskMat);
+        accretionDisk.rotation.x = Math.PI / 2; accretionDisk.position.z = 0; 
+        scene.add(accretionDisk);
+
+        textGroup=new THREE.Group();scene.add(textGroup);
+        const WORDS = []; for(let i=0;i<3;i++){WORDS.push(...baseWords);} 
+        for(let i=0;i<WORDS.length;i++){
+            const tex=makeTextTexture(WORDS[i],COLORS[i%COLORS.length]);
+            const mat=new THREE.SpriteMaterial({map:tex,transparent:true});
+            const sp=new THREE.Sprite(mat); sp.scale.set(50,16,1);
+            const phi=Math.acos(2*Math.random()-1);const theta=Math.random()*Math.PI*2;
+            const r=150+Math.random()*120;
+            sp.position.set(r*Math.sin(phi)*Math.cos(theta),r*Math.cos(phi),r*Math.sin(phi)*Math.sin(theta));
+            sp.userData={phi:phi,theta:theta,radius:r,speed:0.001+Math.random()*0.001};
+            textGroup.add(sp);
+        }
+
+        const numPhotos = 12; // Tetap 12
+        for(let i=0; i < numPhotos; i++) {
+            // Menggunakan i % photoURLs.length untuk memastikan tidak overflow jika numPhotos > photoURLs.length
+            makePhotoTexture(photoURLs[i % photoURLs.length]).then(tex => { 
+                const photoMaterial = new THREE.SpriteMaterial({ map: tex, color: 0xffffff, transparent: true, depthTest: true, blending: THREE.NormalBlending, opacity: 1.0 });
+                const photoSprite = new THREE.Sprite(photoMaterial); photoSprite.scale.set(60, 60, 1); 
+                const phi=Math.acos(2*Math.random()-1); const theta=Math.random()*Math.PI*2; const r=180 + Math.random() * 200; 
+                photoSprite.position.set(r*Math.sin(phi)*Math.cos(theta),r*Math.cos(phi),r*Math.sin(phi)*Math.sin(theta));
+                photoSprite.userData={ phi: phi, theta: theta, radius: r, speed: 0.002 + Math.random() * 0.0015 };
+                textGroup.add(photoSprite); 
+            });
+        }
+        
+        const numIntroPlanets = 5; 
+        for (let i = 0; i < numIntroPlanets; i++) {
+            const textureIndex = Math.floor(Math.random() * planetTextures.length);
+            createPlanet(planetTextures[textureIndex], startDist * 0.8 + Math.random() * startDist * 0.4); 
+        }
+        // --- Akhir Inisialisasi Objek Three.js ---
+
+
+        // 3. Setup Kontrol & Event Listeners
+        function onDown(e){if(isIntroDone){dragging=true;const t=e.touches?e.touches[0]:e;lastX=t.clientX;lastY=t.clientY;}}
+        function onMove(e){
+            if(!isIntroDone || !dragging)return;
+            const t=e.touches?e.touches[0]:e;const dx=(t.clientX-lastX)/window.innerWidth;const dy=(t.clientY-lastY)/window.innerHeight;
+            rotY-=dx*3; rotX=Math.max(-1.2,Math.min(1.2,rotX+dy*2.2));
+            lastX=t.clientX;lastY=t.clientY;
+        }
+        function onUp(){dragging=false;}
+        addEventListener('mousedown',onDown);addEventListener('mousemove',onMove);addEventListener('mouseup',onUp);
+        addEventListener('touchstart',onDown,{passive:true});addEventListener('touchmove',onMove,{passive:true});addEventListener('touchend',onUp,{passive:true});
+        addEventListener('wheel',(e)=>{
+            if(isIntroDone){
+                targetDist+=e.deltaY*0.25;
+                targetDist=Math.max(150,Math.min(650,targetDist)); 
+            }
+        },{passive:true});
+        let pinch=0;
+        addEventListener('touchmove',(e)=>{
+            if(!isIntroDone) return; 
+            if(e.touches && e.touches.length===2){
+                e.preventDefault();
+                const dx=e.touches[0].clientX-e.touches[1].clientX;
+                const dy=e.touches[0].clientY-e.touches[1].clientY;
+                const d=Math.hypot(dx,dy);
+                if(pinch){
+                    targetDist+=(pinch-d)*0.5;
+                    targetDist=Math.max(150,Math.min(650,targetDist));
+                }
+                pinch=d;
+            }
+        },{passive:false});
+        addEventListener('touchend',()=>{pinch=0;},{passive:true});
+        
+        // KONTROL ZOOM
+        zoomJauhButton.addEventListener('click', () => {
+            targetDist = 3000; 
+        });
+        zoomSedangButton.addEventListener('click', () => {
+            targetDist = 1350; 
+        });
+        zoomDekatButton.addEventListener('click', () => {
+            targetDist = 650; 
+        });
+
+
+        // 4. Setup Audio/Playlist Controls 
+        function loadTrack(index) {
+          currentTrackIndex = index;
+          audio.src = playlist[currentTrackIndex].url;
+          audio.load();
+          updatePlaylistUI();
+        }
+        function playTrack() {
+            audio.play().then(() => {
+                isPlaying = true;
+                togglePlayPauseBtn.textContent = '⏸';
+                updatePlaylistUI();
+            }).catch(err => {
+                console.warn("Play prevented. Cannot automatically resume. User must click play button in playlist.", err);
+                isPlaying = false;
+                togglePlayPauseBtn.textContent = '▶';
+            });
+        }
+        function pauseTrack() {
+          audio.pause();
+          isPlaying = false;
+          togglePlayPauseBtn.textContent = '▶';
+          updatePlaylistUI();
+        }
+        function togglePlayPause() { if (isPlaying) { pauseTrack(); } else { playTrack(); } }
+        function nextTrack() {
+          currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+          loadTrack(currentTrackIndex); playTrack();
+        }
+        function prevTrack() {
+          currentTrackIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+          loadTrack(currentTrackIndex); playTrack();
+        }
+        function updatePlaylistUI() {
+          playlistItemsContainer.innerHTML = '';
+          playlist.forEach((track, index) => {
+            const item = document.createElement('div'); item.classList.add('playlist-item');
+            if (index === currentTrackIndex) { item.classList.add('active'); }
+            item.innerHTML = `
+              <div class="track-info"><span class="track-title">${track.name}</span><span class="track-duration">${track.duration || '0:00'}</span></div>
+              <div class="track-progress-bar-mini" id="mini-progress-${index}"></div>`;
+            item.addEventListener('click', () => {
+              if (index === currentTrackIndex && isPlaying) { pauseTrack(); } 
+              else if (index === currentTrackIndex && !isPlaying) { playTrack(); } 
+              else { loadTrack(index); playTrack(); }
+            });
+            playlistItemsContainer.appendChild(item);
+          });
+          togglePlayPauseBtn.textContent = isPlaying ? '⏸' : '▶';
+        }
+
+        // Audio Events
+        audio.addEventListener('timeupdate', () => {
+          const percent = (audio.currentTime / audio.duration) * 100;
+          playlistProgressBar.style.width = (isFinite(percent) ? percent : 0) + '%';
+          const miniBar = document.getElementById(`mini-progress-${currentTrackIndex}`);
+          if (miniBar) { miniBar.style.width = (isFinite(percent) ? percent : 0) + '%'; }
+        });
+        audio.addEventListener('ended', nextTrack); 
+        playlistProgress.addEventListener('click', (e) => {
+          const rect = playlistProgress.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const percent = x / rect.width;
+          if (isFinite(audio.duration)) audio.currentTime = percent * audio.duration;
+        });
+
+        // Menu Events
+        menuButton.addEventListener('click', () => {
+          playlistOverlay.classList.add('visible');
+          updatePlaylistUI();
+        });
+        closePlaylistBtn.addEventListener('click', () => {
+          playlistOverlay.classList.remove('visible');
+        });
+        togglePlayPauseBtn.addEventListener('click', togglePlayPause);
+        prevTrackBtn.addEventListener('click', prevTrack);
+        nextTrackBtn.addEventListener('click', nextTrack);
+
+        // 5. Jalankan Loop Animasi
+        tick();
+    } // --- AKHIR initThreeJS ---
+
+    // E. LOOP ANIMASI UTAMA
+    function tick(){
+        requestAnimationFrame(tick);
+        t+=0.01;
+        
+        if (renderer) {
+            ring1.rotation.z+=0.002;
+            ring2.rotation.z-=0.0015;
+            glow.scale.set(500*(1+Math.sin(t*0.4)*0.03),500*(1+Math.sin(t*0.4)*0.03),1);
+            const s=1.0+0.05*Math.sin(t*3); 
+            core.scale.set(s,s,s);
+            
+            textGroup.children.forEach(sp=>{
+                sp.userData.theta+=sp.userData.speed;
+                sp.position.x=sp.userData.radius*Math.sin(sp.userData.phi)*Math.cos(sp.userData.theta);
+                sp.position.z=sp.userData.radius*Math.sin(sp.userData.phi)*Math.sin(sp.userData.theta);
+                if (sp.material.map && sp.material.map.isCanvasTexture) { 
+                    sp.material.opacity=0.8+0.2*Math.sin(t*2);
+                }
+            });
+            
+            if (accretionDisk) { accretionDisk.rotation.z += 0.003; }
+
+            planets.forEach(planet => {
+                planet.rotation.y += planet.userData.rotationSpeed; 
+            });
+
+            // LOGIKA ANIMASI INTRO (Zoom ke Galaksi)
+            if (!isIntroDone) {
+                introProgress++;
+                const alpha = introProgress / introDuration;
+                
+                if (alpha < 1) {
+                    currentDist = startDist * (1 - alpha) + targetDist * alpha;
+                } else {
+                    isIntroDone = true;
+                    currentDist = targetDist; 
+                }
+            } else {
+                // Smooth Camera Transition (saat intro sudah selesai)
+                currentDist+=(targetDist-currentDist)*0.06;
+            }
+            
+            const cx=Math.cos(rotX),sx=Math.sin(rotX);const cy=Math.cos(rotY),sy=Math.sin(rotY);
+            camera.position.set(currentDist*sy*cx,currentDist*sx,currentDist*cy*cx);camera.lookAt(0,0,0);
+            renderer.render(scene,camera);
+        }
+    }
+    
+    // F. Event Listener Tombol Final: MEMULAI ANIMASI THREE.JS (Setelah Loader/Countdown)
+    actionButton.addEventListener('click', initThreeJS); 
+
+</script>
+<p style="position:fixed; left:2px; bottom:2px; margin:0; z-index: 3000;" id="feedback-text">
+    Pembuat = <•"Mamas Satriaaa"•>
+</p>
+</body>
+</html>
