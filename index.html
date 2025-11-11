@@ -30,7 +30,6 @@
             background-color: #1a1a2e; 
             color: white;
             transition: background-color 0.5s;
-            /* Hapus background-image dari sini */
             position: relative; 
         }
 
@@ -301,7 +300,7 @@
     <canvas id="c"></canvas>
     
     <div id="zoom-controls">
-        <button id="zoom-jauh" class="zoom-button">Jauh (3000M)</button>
+        <button id="zoom-jauh" class="zoom-button">Jauh (5500M)</button>
         <button id="zoom-sedang" class="zoom-button">Sedang (1350M)</button>
         <button id="zoom-dekat" class="zoom-button">Dekat (650M)</button>
     </div>
@@ -336,7 +335,7 @@
     const loadingMessage = document.getElementById('loading-message');
     const countdownText = document.getElementById('countdown-text');
     const actionButton = document.getElementById('action-button'); 
-    const videoBackground = document.getElementById('video-background'); // BARU
+    const videoBackground = document.getElementById('video-background'); 
 
     const loaderDuration = 4000; // Durasi Loader sebelum Countdown
     
@@ -544,9 +543,9 @@
                 ctx.lineTo(size, size - radius); ctx.quadraticCurveTo(size, size, size - radius, size);
                 ctx.lineTo(radius, size); ctx.quadraticCurveTo(0, size, 0, size - radius);
                 ctx.lineTo(0, radius); ctx.quadraticCurveTo(0, 0, radius, 0); ctx.closePath(); ctx.stroke();
-                // Mengambil foto dari array sesuai urutan, bukan random.
                 resolve(new THREE.CanvasTexture(c));
             };
+            // Pastikan URL yang digunakan adalah dari array photoURLs, bukan random.
             image.src = url; 
         });
     }
@@ -574,33 +573,12 @@
         'https://threejs.org/examples/textures/planets/venus_atmos_2048.jpg' 
     ];
     const baseWords = [
-  '⚡🫡 Yoga',       
-  '🌿🙂 Arif',       
-  '🔥😏 Syaiful',    
-  '🌙😉 Arju',       
-  '🤔😶‍🌫️ Rehan',    
-  '🌧️🫤 Zaki',       
-  '🔍🤨 Yanto',       
-  '🌈😮 Nanda',       
-  '⚔️😎👑 Satria',    
-  '❄️🥶 Hamam',       
-
-  '🌙😴 Nayla',       
-  '🎉🤣 Nurma',       
-  '🌸🙂 Anisa',       
-  '🎶😆 Maya',        
-  '🌼🙂 Rina',        
-  '💞🤗 Alya',        
-  '🎭🙃 JioFanny',     
-  '☁️😌 Aini',        
-  '🌷☺ Sherly',       
-  '🌻😁 Siti',        
-  '💐🙂 Linda',       
-  '🎀😄 Ririn',       
-  '🔥😠 Rois',        
-  '🍃🙂 Nikmah',      
-  '🌹🙂 Dina'
-];
+      '⚡🫡 Yoga', '🌿🙂 Arif', '🔥😏 Syaiful', '🌙😉 Arju', '🤔😶‍🌫️ Rehan', 
+      '🌧️🫤 Zaki', '🔍🤨 Yanto', '🌈😮 Nanda', '⚔️😎👑 Satria', '❄️🥶 Hamam', 
+      '🌙😴 Nayla', '🎉🤣 Nurma', '🌸🙂 Anisa', '🎶😆 Maya', '🌼🙂 Rina', 
+      '💞🤗 Alya', '🎭🙃 JioFanny', '☁️😌 Aini', '🌷☺ Sherly', '🌻😁 Siti', 
+      '💐🙂 Linda', '🎀😄 Ririn', '🔥😠 Rois', '🍃🙂 Nikmah', '🌹🙂 Dina'
+    ];
     const COLORS=['#ff66ff','#66ccff','#ffd36b','#ff9966','#8df59a','#ffa0f8','#c6a7ff','#ff4444','#44ff99','#99ccff'];
 
 
@@ -611,7 +589,6 @@
     function initThreeJS() {
         // Hapus video background dan overlay
         document.body.classList.add('galaxy-active');
-        // Stop video (opsional, karena opacity 0, tapi bagus untuk performa)
         videoBackground.pause(); 
         
         // Hilangkan kontainer intro/loader/aksi
@@ -691,7 +668,6 @@
 
         const numPhotos = 12; // Tetap 12
         for(let i=0; i < numPhotos; i++) {
-            // Menggunakan i % photoURLs.length untuk memastikan tidak overflow jika numPhotos > photoURLs.length
             makePhotoTexture(photoURLs[i % photoURLs.length]).then(tex => { 
                 const photoMaterial = new THREE.SpriteMaterial({ map: tex, color: 0xffffff, transparent: true, depthTest: true, blending: THREE.NormalBlending, opacity: 1.0 });
                 const photoSprite = new THREE.Sprite(photoMaterial); photoSprite.scale.set(60, 60, 1); 
@@ -711,16 +687,40 @@
 
 
         // 3. Setup Kontrol & Event Listeners
-        function onDown(e){if(isIntroDone){dragging=true;const t=e.touches?e.touches[0]:e;lastX=t.clientX;lastY=t.clientY;}}
+        function onDown(e){
+            if(isIntroDone){
+                // *** PERBAIKAN: Mencegah default scrolling pada touchstart ***
+                if (e.touches) e.preventDefault(); 
+
+                dragging=true;
+                const t=e.touches?e.touches[0]:e;
+                lastX=t.clientX;
+                lastY=t.clientY;
+            }
+        }
         function onMove(e){
             if(!isIntroDone || !dragging)return;
-            const t=e.touches?e.touches[0]:e;const dx=(t.clientX-lastX)/window.innerWidth;const dy=(t.clientY-lastY)/window.innerHeight;
+            
+            // *** PERBAIKAN: Mencegah default scrolling saat menggeser ***
+            if (e.touches) e.preventDefault(); 
+
+            const t=e.touches?e.touches[0]:e;
+            const dx=(t.clientX-lastX)/window.innerWidth;
+            const dy=(t.clientY-lastY)/window.innerHeight;
             rotY-=dx*3; rotX=Math.max(-1.2,Math.min(1.2,rotX+dy*2.2));
             lastX=t.clientX;lastY=t.clientY;
         }
         function onUp(){dragging=false;}
-        addEventListener('mousedown',onDown);addEventListener('mousemove',onMove);addEventListener('mouseup',onUp);
-        addEventListener('touchstart',onDown,{passive:true});addEventListener('touchmove',onMove,{passive:true});addEventListener('touchend',onUp,{passive:true});
+        
+        addEventListener('mousedown',onDown);
+        addEventListener('mousemove',onMove);
+        addEventListener('mouseup',onUp);
+        
+        // *** PERBAIKAN UTAMA: Ubah passive menjadi false untuk touchstart dan touchmove agar preventDefault berfungsi ***
+        addEventListener('touchstart',onDown,{passive:false}); 
+        addEventListener('touchmove',onMove,{passive:false}); 
+        addEventListener('touchend',onUp,{passive:true});
+        
         addEventListener('wheel',(e)=>{
             if(isIntroDone){
                 targetDist+=e.deltaY*0.25;
@@ -746,7 +746,7 @@
         
         // KONTROL ZOOM
         zoomJauhButton.addEventListener('click', () => {
-            targetDist = 3000; 
+            targetDist = 5500; 
         });
         zoomSedangButton.addEventListener('click', () => {
             targetDist = 1350; 
@@ -892,7 +892,7 @@
 
 </script>
 <p style="position:fixed; left:2px; bottom:2px; margin:0; z-index: 3000;" id="feedback-text">
-    Pembuat = <•"Mamas Satriaaa"•>
+    Pembuat : Mamas Satriaa...
 </p>
 </body>
 </html>
