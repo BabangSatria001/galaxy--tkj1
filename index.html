@@ -509,7 +509,6 @@
         return new THREE.CanvasTexture(c);
     }
     
-    // --- DAFTAR FOTO DIPERBARUI MENGGUNAKAN LINK SUPAIMG.COM ---
     const photoURLs = [ 
         'https://i.supaimg.com/80c9a8c0-e295-4e63-b9e7-c63c6d3c62c4.png',
         'https://i.supaimg.com/12a10215-96a0-42ef-ba0a-62230c038d29.png',
@@ -545,7 +544,6 @@
                 ctx.lineTo(0, radius); ctx.quadraticCurveTo(0, 0, radius, 0); ctx.closePath(); ctx.stroke();
                 resolve(new THREE.CanvasTexture(c));
             };
-            // Pastikan URL yang digunakan adalah dari array photoURLs, bukan random.
             image.src = url; 
         });
     }
@@ -666,9 +664,9 @@
             textGroup.add(sp);
         }
 
-        const numPhotos = 12; // Tetap 12
+        const numPhotos = 12; 
         for(let i=0; i < numPhotos; i++) {
-            makePhotoTexture(photoURLs[i % photoURLs.length]).then(tex => { 
+            makePhotoTexture(photoURLs[i % photoURLs.length]).then(tex => {
                 const photoMaterial = new THREE.SpriteMaterial({ map: tex, color: 0xffffff, transparent: true, depthTest: true, blending: THREE.NormalBlending, opacity: 1.0 });
                 const photoSprite = new THREE.Sprite(photoMaterial); photoSprite.scale.set(60, 60, 1); 
                 const phi=Math.acos(2*Math.random()-1); const theta=Math.random()*Math.PI*2; const r=180 + Math.random() * 200; 
@@ -689,7 +687,7 @@
         // 3. Setup Kontrol & Event Listeners
         function onDown(e){
             if(isIntroDone){
-                // *** PERBAIKAN: Mencegah default scrolling pada touchstart ***
+                // *** Perbaikan: Mencegah default scrolling pada touchstart ***
                 if (e.touches) e.preventDefault(); 
 
                 dragging=true;
@@ -701,7 +699,7 @@
         function onMove(e){
             if(!isIntroDone || !dragging)return;
             
-            // *** PERBAIKAN: Mencegah default scrolling saat menggeser ***
+            // *** Perbaikan: Mencegah default scrolling saat menggeser ***
             if (e.touches) e.preventDefault(); 
 
             const t=e.touches?e.touches[0]:e;
@@ -716,15 +714,16 @@
         addEventListener('mousemove',onMove);
         addEventListener('mouseup',onUp);
         
-        // *** PERBAIKAN UTAMA: Ubah passive menjadi false untuk touchstart dan touchmove agar preventDefault berfungsi ***
+        // *** Perbaikan: Ubah passive menjadi false untuk touchstart dan touchmove ***
         addEventListener('touchstart',onDown,{passive:false}); 
         addEventListener('touchmove',onMove,{passive:false}); 
         addEventListener('touchend',onUp,{passive:true});
         
+        // *** PERBAIKAN UTAMA ZOOm: Batasan targetDist dilonggarkan menjadi 5800 ***
         addEventListener('wheel',(e)=>{
             if(isIntroDone){
                 targetDist+=e.deltaY*0.25;
-                targetDist=Math.max(150,Math.min(650,targetDist)); 
+                targetDist=Math.max(150,Math.min(5800,targetDist)); 
             }
         },{passive:true});
         let pinch=0;
@@ -737,14 +736,14 @@
                 const d=Math.hypot(dx,dy);
                 if(pinch){
                     targetDist+=(pinch-d)*0.5;
-                    targetDist=Math.max(150,Math.min(650,targetDist));
+                    targetDist=Math.max(150,Math.min(5800,targetDist));
                 }
                 pinch=d;
             }
         },{passive:false});
         addEventListener('touchend',()=>{pinch=0;},{passive:true});
         
-        // KONTROL ZOOM
+        // KONTROL ZOOM (Tombol sekarang berfungsi karena batasnya sudah dilonggarkan)
         zoomJauhButton.addEventListener('click', () => {
             targetDist = 5500; 
         });
